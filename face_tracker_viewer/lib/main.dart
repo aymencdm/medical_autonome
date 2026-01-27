@@ -45,7 +45,7 @@ class MyApp extends StatelessWidget {
           ),
           useMaterial3: true,
           scaffoldBackgroundColor: const Color(0xFF0A0E21),
-          cardTheme: CardTheme(
+          cardTheme: CardThemeData(
             color: const Color(0xFF1D1E33),
             elevation: 8,
             shape: RoundedRectangleBorder(

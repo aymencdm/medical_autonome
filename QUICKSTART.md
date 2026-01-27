@@ -1,90 +1,181 @@
-# Quick Start Guide
+# 📋 Quick Reference Card
 
-## Raspberry Pi Setup (One-time)
+## 🚀 Start the System
 
-1. **Install GStreamer**:
-   ```bash
-   sudo apt-get update
-   sudo apt-get install -y gstreamer1.0-tools gstreamer1.0-plugins-base \
-       gstreamer1.0-plugins-good gstreamer1.0-plugins-bad \
-       gstreamer1.0-plugins-ugly gstreamer1.0-libav
-   ```
-
-2. **Install Python dependencies**:
-   ```bash
-   cd rpi
-   pip install -r requirements_rtp.txt
-   ```
-
-## Running the System
-
-### On Raspberry Pi:
-
+### Raspberry Pi
 ```bash
-cd rpi
+cd ~/ppp/rpi
 python app_rtp.py
 ```
+**Note the IP address shown!** (e.g., 192.168.1.100)
 
-You should see:
+### Windows Desktop
+```bash
+cd face_tracker_viewer
+flutter run -d windows
 ```
-============================================================
-RTP Streaming Server for Raspberry Pi Face Tracker
-============================================================
-RTP Stream will be available at: rtp://<server-ip>:5000
-SDP file available at: http://<server-ip>:8080/stream.sdp
-============================================================
+Or double-click `run.bat`
+
+---
+
+## 🔌 Connect
+
+1. Enter Pi IP address in app
+2. Click "Connect"
+3. Click "Start Stream"
+4. Watch the video!
+
+---
+
+## 🛠️ Common Commands
+
+### Raspberry Pi
+
+```bash
+# Test setup
+python test_setup.py
+
+# Check IP address
+hostname -I
+
+# Test camera
+libcamera-hello
+
+# Check GStreamer
+gst-launch-1.0 --version
+
+# View running processes
+ps aux | grep python
 ```
 
-Note the IP address (e.g., 192.168.1.100)
+### Windows
 
-### On Android Device:
+```bash
+# Check Flutter
+flutter doctor
 
-1. Install the APK or run from Flutter:
-   ```bash
-   cd face_tracker_app
-   flutter run
-   ```
+# Clean build
+flutter clean
+flutter pub get
 
-2. In the app:
-   - Enter the Raspberry Pi IP address
-   - Tap "Connect"
-   - Tap "Start Stream"
-   - Enjoy the live video feed!
+# Build release
+flutter build windows --release
 
-## Network Requirements
+# View logs
+flutter logs
+```
 
-- Both devices must be on the same WiFi network
-- Firewall must allow ports: 5000, 5001, 8080
+---
 
-## Differences from HTTP Streaming
+## 🌐 Network
 
-### Old (HTTP/MJPEG):
-- Protocol: HTTP
-- Format: MJPEG (Motion JPEG)
-- Port: 5000
-- Latency: Higher (~500ms)
-- Bandwidth: Higher
+### Ports
+- **5000** - RTP video stream
+- **5001** - RTCP control  
+- **8080** - HTTP API
 
-### New (RTP):
-- Protocol: RTP (Real-time Transport Protocol)
-- Format: H.264 (compressed)
-- Ports: 5000 (RTP), 5001 (RTCP), 8080 (API)
-- Latency: Lower (~100-200ms)
-- Bandwidth: Lower (better compression)
-- Quality: Better
+### Test Connection
+```bash
+# Ping Pi
+ping 192.168.1.100
 
-## Troubleshooting
+# Test API
+curl http://192.168.1.100:8080/health
+```
 
-**Can't connect?**
-- Ping the Raspberry Pi: `ping <ip-address>`
-- Check if server is running: `curl http://<ip>:8080/health`
+---
 
-**No video?**
-- Wait 5-10 seconds for stream to initialize
-- Check GStreamer is installed on Pi
-- Restart the app
+## ⚙️ Video Settings
 
-**Laggy video?**
-- Move closer to WiFi router
-- Reduce other network traffic
-- Lower bitrate in app_rtp.py
+**Edit `rpi/app_rtp.py`:**
+
+```python
+# Low quality (fast)
+VIDEO_WIDTH = 320
+VIDEO_HEIGHT = 240
+VIDEO_BITRATE = 500000
+
+# Medium (default)
+VIDEO_WIDTH = 640
+VIDEO_HEIGHT = 480
+VIDEO_BITRATE = 1000000
+
+# High quality (slow)
+VIDEO_WIDTH = 1280
+VIDEO_HEIGHT = 720
+VIDEO_BITRATE = 2000000
+```
+
+---
+
+## 🐛 Quick Troubleshooting
+
+| Problem | Solution |
+|---------|----------|
+| Can't connect | Check IP, verify same WiFi |
+| No video | Wait 10s, restart stream |
+| Laggy | Lower bitrate, use 5GHz WiFi |
+| Build error | `flutter clean && flutter pub get` |
+| Port in use | Kill process: `sudo lsof -i :5000` |
+
+---
+
+## 📁 Important Files
+
+```
+ppp/
+├── rpi/
+│   ├── app_rtp.py          ⭐ RTP server
+│   ├── test_setup.py       🔧 Test script
+│   └── requirements_rtp.txt 📦 Dependencies
+│
+└── face_tracker_viewer/
+    ├── run.bat             ▶️ Quick start
+    ├── lib/main.dart       🎨 App entry
+    └── README.md           📖 Documentation
+```
+
+---
+
+## 📚 Documentation
+
+- **SETUP_GUIDE.md** - Complete setup instructions
+- **PROJECT_SUMMARY.md** - Full project overview
+- **QUICKSTART.md** - Quick start guide
+- **face_tracker_viewer/README.md** - App details
+
+---
+
+## ✅ Success Checklist
+
+- [ ] GStreamer installed on Pi
+- [ ] Python packages installed
+- [ ] Flutter installed on Windows
+- [ ] Both on same WiFi
+- [ ] Pi server running
+- [ ] Desktop app running
+- [ ] Connected successfully
+- [ ] Video streaming
+
+---
+
+## 🎯 Key Features
+
+✨ **Low latency** (~100-200ms)  
+✨ **H.264 compression** (better quality)  
+✨ **Desktop app** (large screen)  
+✨ **Real-time monitoring**  
+✨ **Professional UI**  
+
+---
+
+## 📞 Need Help?
+
+1. Run `python test_setup.py` on Pi
+2. Check `flutter doctor` on Windows
+3. Review SETUP_GUIDE.md
+4. Check logs on both devices
+
+---
+
+**Made with Flutter & RTP** 🚀
