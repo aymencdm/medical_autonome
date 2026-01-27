@@ -2,10 +2,10 @@
 
 ## 🚀 Start the System
 
-### Raspberry Pi
+### On Raspberry Pi:
 ```bash
 cd ~/ppp/rpi
-python app_rtp.py
+python app_tracker_rtp.py
 ```
 **Note the IP address shown!** (e.g., 192.168.1.100)
 

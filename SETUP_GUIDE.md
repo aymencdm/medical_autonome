@@ -72,7 +72,7 @@ All checks passed! You're ready to run the RTP server.
 ### 1.4 Start the RTP Server
 
 ```bash
-python app_rtp.py
+python app_tracker_rtp.py
 ```
 
 **You should see:**

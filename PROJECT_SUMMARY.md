@@ -84,8 +84,8 @@ flutter run -d windows
 ppp/
 ├── rpi/                           # Raspberry Pi code
 │   ├── app.py                     # Original HTTP/MJPEG server
-│   ├── app_rtp.py                # ⭐ NEW: RTP streaming server
-│   ├── face_tracker.py           # Face tracking logic
+│   ├── app_tracker_rtp.py        # ⭐ NEW: Integrated RTP Face Tracker
+│   ├── face_tracker.py           # Original MJPEG Tracker logic
 │   ├── requirements.txt          # Original dependencies
 │   ├── requirements_rtp.txt      # ⭐ NEW: RTP dependencies
 │   └── test_setup.py             # ⭐ NEW: Setup verification
