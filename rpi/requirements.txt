@@ -1,0 +1,12 @@
+# Face Tracking System Dependencies for Raspberry Pi
+
+# Web framework
+flask>=2.0.0
+
+# Computer vision
+opencv-python>=4.5.0
+numpy>=1.20.0
+
+# Raspberry Pi specific (only works on Pi)
+# picamera2  # Usually pre-installed on Raspberry Pi OS
+# RPi.GPIO   # Usually pre-installed on Raspberry Pi OS
