@@ -1,0 +1,5 @@
+.venv/
+face-detection-caffe/
+face-detection/dataset/User*
+face-detection/trainer/trainer.yml*
+__pycache__

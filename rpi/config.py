@@ -39,5 +39,22 @@ CONFIG = {
     "NETWORK": {
         "PORT": 8080,
         "NAMESPACE": "/stream"
+    },
+    "MEDICINE": {
+        "WHEEL_PIN": 22,
+        "DOOR_PIN": 23,
+        "ROTATION_SPEED": 1.0,  # degrees per step
+        "PICKUP_WAIT_TIME": 10,  # seconds
+        "DOOR_OPEN_ANGLE": 90,
+        "DOOR_CLOSED_ANGLE": 0
+    },
+    "ARDUINO": {
+        "PORT": "/dev/ttyUSB0",
+        "BAUDRATE": 9600
+    },
+    "FACE_RECOGNITION": {
+        "DATASET_PATH": "datasets/faces",
+        "CONFIDENCE_THRESHOLD": 100,
+        "DETECTION_TIME": 3.0  # seconds of continuous detection before recognition
     }
 }

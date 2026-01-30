@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:window_manager/window_manager.dart';
-import 'screens/viewer_screen.dart';
-import 'services/stream_service.dart';
+import 'services/raspberry_pi_service.dart';
+import 'providers/medicine_provider.dart';
+import 'providers/system_provider.dart';
+import 'screens/home_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -11,78 +13,82 @@ void main() async {
   await windowManager.ensureInitialized();
   
   WindowOptions windowOptions = const WindowOptions(
-    size: Size(1280, 800),
+    size: Size(1000, 700),
     minimumSize: Size(800, 600),
     center: true,
-    backgroundColor: Color(0xFF0A0E21),
+    backgroundColor: Colors.transparent,
     skipTaskbar: false,
     titleBarStyle: TitleBarStyle.normal,
-    title: 'Face Tracker RTP Viewer',
+    title: 'Medical Delivery Robot Control',
   );
-  
+
   windowManager.waitUntilReadyToShow(windowOptions, () async {
     await windowManager.show();
     await windowManager.focus();
   });
-  
-  runApp(const MyApp());
+
+  runApp(const MedicalRobotApp());
 }
 
-class MyApp extends StatelessWidget {
-  const MyApp({super.key});
+class MedicalRobotApp extends StatelessWidget {
+  const MedicalRobotApp({Key? key}) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
-    return ChangeNotifierProvider(
-      create: (_) => StreamService(),
+    // Initialize Raspberry Pi Service
+    // TODO: Make this configurable via settings screen
+    final rpiService = RaspberryPiService(
+      baseUrl: 'http://raspberrypi.local:8080', // Change to your RPi IP
+      socketNamespace: '/stream',
+    );
+
+    return MultiProvider(
+      providers: [
+        Provider<RaspberryPiService>.value(value: rpiService),
+        ChangeNotifierProvider(create: (_) => MedicineProvider(rpiService)),
+        ChangeNotifierProvider(create: (_) => SystemProvider(rpiService)),
+      ],
       child: MaterialApp(
-        title: 'Face Tracker RTP Viewer',
+        title: 'Medical Delivery Robot',
         debugShowCheckedModeBanner: false,
         theme: ThemeData(
-          colorScheme: ColorScheme.fromSeed(
-            seedColor: const Color(0xFF2196F3),
-            brightness: Brightness.dark,
+          brightness: Brightness.dark,
+          primarySwatch: Colors.cyan,
+          scaffoldBackgroundColor: Colors.black,
+          fontFamily: 'Inter',
+          textTheme: const TextTheme(
+            headlineLarge: TextStyle(
+              fontSize: 32,
+              fontWeight: FontWeight.bold,
+              color: Colors.white,
+            ),
+            headlineMedium: TextStyle(
+              fontSize: 24,
+              fontWeight: FontWeight.w600,
+              color: Colors.white,
+            ),
+            bodyLarge: TextStyle(
+              fontSize: 16,
+              color: Colors.white70,
+            ),
           ),
-          useMaterial3: true,
-          scaffoldBackgroundColor: const Color(0xFF0A0E21),
           cardTheme: CardThemeData(
-            color: const Color(0xFF1D1E33),
+            color: Colors.grey.shade900,
             elevation: 8,
             shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(16),
+              borderRadius: BorderRadius.circular(15),
             ),
           ),
           elevatedButtonTheme: ElevatedButtonThemeData(
             style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFF2196F3),
-              foregroundColor: Colors.white,
-              padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(12),
               ),
-              elevation: 4,
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
             ),
-          ),
-          inputDecorationTheme: InputDecorationTheme(
-            filled: true,
-            fillColor: const Color(0xFF1D1E33),
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-              borderSide: BorderSide.none,
-            ),
-            enabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-              borderSide: const BorderSide(color: Color(0xFF2196F3), width: 1),
-            ),
-            focusedBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-              borderSide: const BorderSide(color: Color(0xFF2196F3), width: 2),
-            ),
-            labelStyle: const TextStyle(color: Colors.white70),
-            hintStyle: const TextStyle(color: Colors.white38),
           ),
         ),
-        home: const ViewerScreen(),
+        home: const HomeScreen(),
       ),
     );
   }
