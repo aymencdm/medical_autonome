@@ -51,67 +51,69 @@ class LiveCameraScreen extends StatelessWidget {
             // Right: System Status Panel
             Expanded(
               flex: 2,
-              child: Container(
-                padding: const EdgeInsets.all(20),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    // Mode Status
-                    _buildStatusCard(
-                      'System Mode',
-                      state.mode.displayName,
-                      state.mode.icon,
-                      Colors.cyan,
-                    ),
-                    const SizedBox(height: 15),
-
-                    // Wheel Status
-                    _buildStatusCard(
-                      'Wheel Angle',
-                      '${state.wheelAngle.toStringAsFixed(0)}°',
-                      '🎯',
-                      Colors.purple,
-                    ),
-                    const SizedBox(height: 15),
-
-                    // Door Status
-                    _buildStatusCard(
-                      'Door Status',
-                      state.isDoorOpen ? 'OPEN' : 'CLOSED',
-                      state.isDoorOpen ? '🚪' : '🔒',
-                      state.isDoorOpen ? Colors.green : Colors.red,
-                    ),
-                    const SizedBox(height: 15),
-
-                    // Patient Recognition
-                    if (state.recognizedPatientName != null)
+              child: SingleChildScrollView(
+                child: Container(
+                  padding: const EdgeInsets.all(20),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // Mode Status
                       _buildStatusCard(
-                        'Recognized Patient',
-                        state.recognizedPatientName!,
-                        '👤',
-                        Colors.green,
+                        'System Mode',
+                        state.mode.displayName,
+                        state.mode.icon,
+                        Colors.cyan,
                       ),
+                      const SizedBox(height: 15),
 
-                    const Spacer(),
+                      // Wheel Status
+                      _buildStatusCard(
+                        'Wheel Angle',
+                        '${state.wheelAngle.toStringAsFixed(0)}°',
+                        '🎯',
+                        Colors.purple,
+                      ),
+                      const SizedBox(height: 15),
 
-                    // Emergency Stop Button
-                    SizedBox(
-                      width: double.infinity,
-                      child: ElevatedButton.icon(
-                        onPressed: () => systemProvider.emergencyStop(),
-                        icon: const Icon(Icons.stop_circle),
-                        label: const Text('EMERGENCY STOP'),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.red.shade700,
-                          foregroundColor: Colors.white,
-                          padding: const EdgeInsets.symmetric(vertical: 20),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(15),
+                      // Door Status
+                      _buildStatusCard(
+                        'Door Status',
+                        state.isDoorOpen ? 'OPEN' : 'CLOSED',
+                        state.isDoorOpen ? '🚪' : '🔒',
+                        state.isDoorOpen ? Colors.green : Colors.red,
+                      ),
+                      const SizedBox(height: 15),
+
+                      // Patient Recognition
+                      if (state.recognizedPatientName != null)
+                        _buildStatusCard(
+                          'Recognized Patient',
+                          state.recognizedPatientName!,
+                          '👤',
+                          Colors.green,
+                        ),
+
+                      const SizedBox(height: 30),
+
+                      // Emergency Stop Button
+                      SizedBox(
+                        width: double.infinity,
+                        child: ElevatedButton.icon(
+                          onPressed: () => systemProvider.emergencyStop(),
+                          icon: const Icon(Icons.stop_circle),
+                          label: const Text('EMERGENCY STOP'),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.red.shade700,
+                            foregroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(vertical: 20),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(15),
+                            ),
                           ),
                         ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
               ),
             ),

@@ -50,48 +50,50 @@ class _MedicineWheelScreenState extends State<MedicineWheelScreen> {
   Widget _buildWheelSection(MedicineProvider provider) {
     return Container(
       padding: const EdgeInsets.all(30),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Text(
-            '🎡 Medicine Carousel',
-            style: TextStyle(
-              fontSize: 28,
-              fontWeight: FontWeight.bold,
-              foreground: Paint()
-                ..shader = LinearGradient(
-                  colors: [Colors.purple.shade300, Colors.blue.shade400],
-                ).createShader(const Rect.fromLTWH(0, 0, 300, 30)),
+      child: SingleChildScrollView(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Text(
+              '🎡 Medicine Carousel',
+              style: TextStyle(
+                fontSize: 28,
+                fontWeight: FontWeight.bold,
+                foreground: Paint()
+                  ..shader = LinearGradient(
+                    colors: [Colors.purple.shade300, Colors.blue.shade400],
+                  ).createShader(const Rect.fromLTWH(0, 0, 300, 30)),
+              ),
             ),
-          ),
-          const SizedBox(height: 10),
-          Text(
-            '180° Backward Rotation on Selection',
-            style: TextStyle(
-              fontSize: 14,
-              color: Colors.orange.shade400,
-              fontWeight: FontWeight.w500,
+            const SizedBox(height: 10),
+            Text(
+              '180° Backward Rotation on Selection',
+              style: TextStyle(
+                fontSize: 14,
+                color: Colors.orange.shade400,
+                fontWeight: FontWeight.w500,
+              ),
             ),
-          ),
-          const SizedBox(height: 40),
+            const SizedBox(height: 40),
 
-          // Wheel Visualizer
-          MedicineWheelVisualizer(
-            medicines: provider.medicines,
-            currentAngle: provider.currentWheelAngle,
-            targetAngle: provider.targetWheelAngle,
-            isRotating: provider.isRotating,
-            size: 450,
-            onMedicineSelected: (medicine) {
-              _showRotateConfirmation(medicine, provider);
-            },
-          ),
+            // Wheel Visualizer
+            MedicineWheelVisualizer(
+              medicines: provider.medicines,
+              currentAngle: provider.currentWheelAngle,
+              targetAngle: provider.targetWheelAngle,
+              isRotating: provider.isRotating,
+              size: 450,
+              onMedicineSelected: (medicine) {
+                _showRotateConfirmation(medicine, provider);
+              },
+            ),
 
-          const SizedBox(height: 30),
+            const SizedBox(height: 30),
 
-          // Manual Controls
-          _buildManualControls(provider),
-        ],
+            // Manual Controls
+            _buildManualControls(provider),
+          ],
+        ),
       ),
     );
   }

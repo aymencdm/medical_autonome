@@ -6,6 +6,7 @@ import 'patient_management_screen.dart';
 import 'medicine_wheel_screen.dart';
 import 'assignment_screen.dart';
 import 'live_camera_screen.dart';
+import 'settings_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({Key? key}) : super(key: key);
@@ -47,6 +48,11 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
       setState(() {
         _selectedIndex = _tabController.index;
       });
+    });
+
+    // Auto-connect on startup
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      context.read<SystemProvider>().connect();
     });
   }
 
@@ -166,6 +172,28 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
 
                   // System Status
                   _buildSystemStatus(),
+
+                  // Settings Button
+                  const SizedBox(width: 10),
+                  Container(
+                    decoration: BoxDecoration(
+                      color: Colors.black.withOpacity(0.4),
+                      borderRadius: BorderRadius.circular(15),
+                      border: Border.all(
+                        color: Colors.white24,
+                      ),
+                    ),
+                    child: IconButton(
+                      icon: const Icon(Icons.settings, color: Colors.white70),
+                      onPressed: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(builder: (context) => const SettingsScreen()),
+                        );
+                      },
+                      tooltip: 'Settings',
+                    ),
+                  ),
                 ],
               ),
             ),
@@ -260,6 +288,19 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                       fontWeight: FontWeight.bold,
                     ),
                   ),
+                  if (!isConnected && systemProvider.error != null)
+                     Padding(
+                       padding: const EdgeInsets.only(top: 2.0),
+                       child: Text(
+                         systemProvider.error!.length > 30 
+                             ? '${systemProvider.error!.substring(0, 30)}...' 
+                             : systemProvider.error!,
+                         style: TextStyle(
+                           color: Colors.red.shade200,
+                           fontSize: 9,
+                         ),
+                       ),
+                     ),
                   if (isConnected)
                     Text(
                       mode.displayName,

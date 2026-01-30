@@ -7,7 +7,7 @@ import '../models/patient.dart';
 import '../models/medicine.dart';
 
 class RaspberryPiService {
-  final String baseUrl;
+  String baseUrl;
   final String socketNamespace;
   IO.Socket? _socket;
   
@@ -23,15 +23,31 @@ class RaspberryPiService {
     this.socketNamespace = '/stream',
   });
 
+  void updateBaseUrl(String newUrl) {
+    if (baseUrl == newUrl) return;
+    
+    print('Updating RPi Service URL to: $newUrl');
+    baseUrl = newUrl;
+    
+    // Reconnect WebSocket if it was active or needs to be active
+    if (_socket != null) {
+      disconnectWebSocket();
+      connectWebSocket();
+    }
+  }
+
   // ==================== HTTP API METHODS ====================
 
   Future<bool> testConnection() async {
     try {
+      print('Testing connection to: $baseUrl/api/system/status');
       final response = await http.get(Uri.parse('$baseUrl/api/system/status')).timeout(
-        const Duration(seconds: 5),
+        const Duration(seconds: 10),
       );
+      print('Connection Status Code: ${response.statusCode}');
       return response.statusCode == 200;
     } catch (e) {
+      print('Connection Error: $e');
       return false;
     }
   }

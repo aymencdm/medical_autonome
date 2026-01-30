@@ -6,6 +6,8 @@ import 'providers/medicine_provider.dart';
 import 'providers/system_provider.dart';
 import 'screens/home_screen.dart';
 
+import 'services/settings_service.dart';
+
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   
@@ -27,23 +29,31 @@ void main() async {
     await windowManager.focus();
   });
 
-  runApp(const MedicalRobotApp());
+  // Initialize Settings
+  final settingsService = await SettingsService.init();
+
+  runApp(MedicalRobotApp(settingsService: settingsService));
 }
 
 class MedicalRobotApp extends StatelessWidget {
-  const MedicalRobotApp({Key? key}) : super(key: key);
+  final SettingsService settingsService;
+
+  const MedicalRobotApp({
+    Key? key, 
+    required this.settingsService,
+  }) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
-    // Initialize Raspberry Pi Service
-    // TODO: Make this configurable via settings screen
+    // Initialize Raspberry Pi Service with stored IP
     final rpiService = RaspberryPiService(
-      baseUrl: 'http://raspberrypi.local:8080', // Change to your RPi IP
+      baseUrl: settingsService.ipAddress,
       socketNamespace: '/stream',
     );
 
     return MultiProvider(
       providers: [
+        Provider<SettingsService>.value(value: settingsService),
         Provider<RaspberryPiService>.value(value: rpiService),
         ChangeNotifierProvider(create: (_) => MedicineProvider(rpiService)),
         ChangeNotifierProvider(create: (_) => SystemProvider(rpiService)),
