@@ -99,3 +99,11 @@ LOGGING = {
         'level': 'INFO',
     },
 }
+
+# DRF Settings - Disable SessionAuth to bypass CSRF for mobile app
+REST_FRAMEWORK = {
+    'DEFAULT_AUTHENTICATION_CLASSES': [],
+    'DEFAULT_PERMISSION_CLASSES': [
+        'rest_framework.permissions.AllowAny',
+    ],
+}

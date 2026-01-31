@@ -55,7 +55,7 @@ class RaspberryPiService {
   // Patient Management
   Future<void> addPatient(Patient patient) async {
     final response = await http.post(
-      Uri.parse('$baseUrl/api/patients'),
+      Uri.parse('$baseUrl/api/patients/'),
       headers: {'Content-Type': 'application/json'},
       body: jsonEncode(patient.toMap()),
     );
@@ -66,7 +66,7 @@ class RaspberryPiService {
 
   Future<void> deletePatient(int patientId) async {
     final response = await http.delete(
-      Uri.parse('$baseUrl/api/patients/$patientId'),
+      Uri.parse('$baseUrl/api/patients/$patientId/'),
     );
     if (response.statusCode != 200) {
       throw Exception('Failed to delete patient');
@@ -87,6 +87,20 @@ class RaspberryPiService {
     }
   }
 
+  /// Start face capture on the Raspberry Pi camera
+  /// The robot will automatically capture face images for the patient
+  Future<bool> startFaceCapture(int patientId) async {
+    final response = await http.post(
+      Uri.parse('$baseUrl/api/patients/$patientId/capture'),
+      headers: {'Content-Type': 'application/json'},
+    );
+    if (response.statusCode == 200) {
+      return true;
+    } else {
+      throw Exception('Failed to start face capture: ${response.body}');
+    }
+  }
+
   Future<void> trainFaceRecognition() async {
     final response = await http.post(
       Uri.parse('$baseUrl/api/train'),
@@ -100,7 +114,7 @@ class RaspberryPiService {
   // Medicine Management
   Future<void> addMedicine(Medicine medicine) async {
     final response = await http.post(
-      Uri.parse('$baseUrl/api/medicines'),
+      Uri.parse('$baseUrl/api/medicines/'),
       headers: {'Content-Type': 'application/json'},
       body: jsonEncode(medicine.toMap()),
     );
@@ -111,7 +125,7 @@ class RaspberryPiService {
 
   Future<void> updateMedicine(Medicine medicine) async {
     final response = await http.put(
-      Uri.parse('$baseUrl/api/medicines/${medicine.id}'),
+      Uri.parse('$baseUrl/api/medicines/${medicine.id}/'),
       headers: {'Content-Type': 'application/json'},
       body: jsonEncode(medicine.toMap()),
     );
@@ -122,7 +136,7 @@ class RaspberryPiService {
 
   Future<void> deleteMedicine(int medicineId) async {
     final response = await http.delete(
-      Uri.parse('$baseUrl/api/medicines/$medicineId'),
+      Uri.parse('$baseUrl/api/medicines/$medicineId/'),
     );
     if (response.statusCode != 200) {
       throw Exception('Failed to delete medicine');
@@ -132,7 +146,7 @@ class RaspberryPiService {
   // Assignment Management
   Future<void> assignMedicine(int patientId, int medicineId) async {
     final response = await http.post(
-      Uri.parse('$baseUrl/api/assignments'),
+      Uri.parse('$baseUrl/api/assignments/'),
       headers: {'Content-Type': 'application/json'},
       body: jsonEncode({
         'patientId': patientId,
@@ -211,8 +225,21 @@ class RaspberryPiService {
     });
 
     _socket!.on('video_frame', (data) {
-      if (onVideoFrame != null && data is List<int>) {
-        onVideoFrame!(Uint8List.fromList(data));
+      if (onVideoFrame == null) return;
+      
+      try {
+        if (data is Uint8List) {
+          onVideoFrame!(data);
+        } else if (data is List) {
+          onVideoFrame!(Uint8List.fromList(List<int>.from(data)));
+        } else if (data is Map && data.containsKey('data')) {
+           final content = data['data'];
+           if (content is List) {
+             onVideoFrame!(Uint8List.fromList(List<int>.from(content)));
+           }
+        }
+      } catch (e) {
+        print('Error processing video frame: $e');
       }
     });
 
@@ -256,6 +283,18 @@ class RaspberryPiService {
 
   void center() {
     _socket?.emit('center');
+  }
+
+  void startStream() {
+    _socket?.emit('start_stream');
+  }
+
+  void stopStream() {
+    _socket?.emit('stop_stream');
+  }
+
+  void captureFrame(int patientId) {
+    _socket?.emit('capture_frame', {'patient_id': patientId});
   }
 
   void dispose() {

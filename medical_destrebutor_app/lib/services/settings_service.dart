@@ -2,7 +2,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 class SettingsService {
   static const String _kIpAddressKey = 'rpi_ip_address';
-  static const String _kDefaultIp = 'http://raspberrypi.local:8080';
+  static const String _kDefaultIp = 'http://192.168.1.6:8080';
 
   final SharedPreferences _prefs;
 

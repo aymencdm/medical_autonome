@@ -2,7 +2,7 @@
 Servo Control Module for rpi_pro
 """
 import logging
-from config import CONFIG
+from .config import CONFIG
 
 # --- Logging ---
 logger = logging.getLogger(__name__)

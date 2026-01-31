@@ -5,7 +5,7 @@ Implements 180° backward rotation logic
 """
 import time
 import logging
-from config import CONFIG
+from .config import CONFIG
 
 logger = logging.getLogger(__name__)
 

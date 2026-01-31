@@ -3,10 +3,13 @@ import 'package:provider/provider.dart';
 import 'package:window_manager/window_manager.dart';
 import 'services/raspberry_pi_service.dart';
 import 'providers/medicine_provider.dart';
+import 'providers/patient_provider.dart';
 import 'providers/system_provider.dart';
 import 'screens/home_screen.dart';
 
 import 'services/settings_service.dart';
+
+import 'providers/video_provider.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -56,7 +59,9 @@ class MedicalRobotApp extends StatelessWidget {
         Provider<SettingsService>.value(value: settingsService),
         Provider<RaspberryPiService>.value(value: rpiService),
         ChangeNotifierProvider(create: (_) => MedicineProvider(rpiService)),
+        ChangeNotifierProvider(create: (_) => PatientProvider(rpiService)),
         ChangeNotifierProvider(create: (_) => SystemProvider(rpiService)),
+        ChangeNotifierProvider(create: (_) => VideoProvider(rpiService)),
       ],
       child: MaterialApp(
         title: 'Medical Delivery Robot',

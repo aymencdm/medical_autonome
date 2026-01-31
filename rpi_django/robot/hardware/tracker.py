@@ -9,7 +9,7 @@ import cv2
 import mediapipe as mp
 import time
 import math
-from config import CONFIG
+from .config import CONFIG
 
 class FaceTrackerPro:
     def __init__(self):

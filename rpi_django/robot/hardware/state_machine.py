@@ -49,7 +49,7 @@ class StateMachine:
             RobotMode.MEDICINE_DISPENSING: [RobotMode.WAITING_FOR_PICKUP, RobotMode.ERROR],
             RobotMode.WAITING_FOR_PICKUP: [RobotMode.RESUMING, RobotMode.ERROR],
             RobotMode.RESUMING: [RobotMode.LINE_FOLLOWING, RobotMode.ERROR],
-            RobotMode.TRAINING_CAPTURE: [RobotMode.IDLE, RobotMode.FACE_TRACKING, RobotMode.ERROR],
+            RobotMode.TRAINING_CAPTURE: [RobotMode.IDLE, RobotMode.FACE_TRACKING, RobotMode.ERROR, RobotMode.TRAINING_CAPTURE],
             RobotMode.ERROR: [RobotMode.IDLE, RobotMode.LINE_FOLLOWING],
         }
         

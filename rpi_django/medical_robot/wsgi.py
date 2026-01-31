@@ -8,7 +8,7 @@ os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'medical_robot.settings')
 django_app = get_wsgi_application()
 
 # Initialize SocketIO
-sio = socketio.Server(async_mode='threading', cors_allowed_origins='*')
+sio = socketio.Server(async_mode='threading', cors_allowed_origins='*', logger=True, engineio_logger=True)
 
 # Import event handlers (Must be done after sio init to avoid circular imports if structured poorly, 
 # but usually done by importing the sockets module where @sio.event are defined)

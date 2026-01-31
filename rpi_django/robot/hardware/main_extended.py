@@ -10,13 +10,13 @@ from flask import Flask, request, jsonify
 from flask_socketio import SocketIO, emit
 from picamera2 import Picamera2
 
-from config import CONFIG
-from servos import ServoController
-from tracker import FaceTrackerPro
-from state_machine import StateMachine, RobotMode
-from medicine_controller import MedicineController
-from face_recognizer import FaceRecognizer
-from serial_comm import SerialComm
+from .config import CONFIG
+from .servos import ServoController
+from .tracker import FaceTrackerPro
+from .state_machine import StateMachine, RobotMode
+from .medicine_controller import MedicineController
+from .face_recognizer import FaceRecognizer
+from .serial_comm import SerialComm
 
 # --- Logging ---
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s: %(message)s')

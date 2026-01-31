@@ -16,7 +16,7 @@ class SerialComm:
         self.is_connected = False
         
         # Check if hardware is enabled
-        from config import CONFIG
+        from .config import CONFIG
         self.enabled = CONFIG["HARDWARE"]["ARDUINO_ENABLED"]
         if not self.enabled:
             logger.warning("⚠️ Arduino Disabled in Config (Mock Mode)")

@@ -17,23 +17,21 @@ class Patient {
 
   Map<String, dynamic> toMap() {
     return {
-      'id': id,
+      if (id != null) 'id': id,
       'name': name,
-      'photoPath': photoPath,
-      'isTrained': isTrained ? 1 : 0,
-      'assignedMedicineId': assignedMedicineId,
-      'createdAt': createdAt.toIso8601String(),
     };
   }
 
   factory Patient.fromMap(Map<String, dynamic> map) {
     return Patient(
       id: map['id'],
-      name: map['name'],
-      photoPath: map['photoPath'],
-      isTrained: map['isTrained'] == 1,
-      assignedMedicineId: map['assignedMedicineId'],
-      createdAt: DateTime.parse(map['createdAt']),
+      name: map['name'] ?? '',
+      photoPath: map['photo_path'],
+      isTrained: map['is_trained'] == true || map['is_trained'] == 1,
+      assignedMedicineId: map['assigned_medicine_id'],
+      createdAt: map['created_at'] != null 
+          ? DateTime.parse(map['created_at']) 
+          : DateTime.now(),
     );
   }
 

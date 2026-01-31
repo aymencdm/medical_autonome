@@ -101,7 +101,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                           controller: _ipController,
                           decoration: const InputDecoration(
                             labelText: 'Raspberry Pi IP Address',
-                            hintText: 'http://192.168.1.100:8080',
+                            hintText: '192.168.1.100',
                             border: OutlineInputBorder(),
                             prefixIcon: Icon(Icons.wifi),
                           ),
@@ -114,7 +114,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         ),
                         const SizedBox(height: 8),
                         const Text(
-                          'Enter the full URL including port (e.g., http://192.168.1.100:8080)',
+                          'Just enter the IP address (e.g., 192.168.1.100). Port 8080 will be added automatically.',
                           style: TextStyle(
                             color: Colors.grey,
                             fontSize: 12,
