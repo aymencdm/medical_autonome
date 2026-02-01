@@ -39,5 +39,9 @@ CONFIG = {
     "NETWORK": {
         "PORT": 8080,
         "NAMESPACE": "/stream"
+    },
+    # Added for Stream Mode Support
+    "STREAM_MODE": {
+        "DEFAULT": "normal"
     }
 }

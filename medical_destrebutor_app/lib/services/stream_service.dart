@@ -1,29 +1,94 @@
-import 'dart:typed_data';
 import 'package:flutter/foundation.dart';
 import 'package:socket_io_client/socket_io_client.dart' as io;
 
+/// Available streaming modes
+enum StreamMode {
+  normal,       // Pure video streaming, no servos
+  manual,       // Manual control with keyboard
+  recognition   // Face detection active, servos OFF
+}
+
+/// Extension to convert enum to/from string
+extension StreamModeExtension on StreamMode {
+  String get value {
+    switch (this) {
+      case StreamMode.manual:
+        return 'manual';
+      case StreamMode.recognition:
+        return 'recognition';
+      case StreamMode.normal:
+        return 'normal';
+    }
+  }
+  
+  static StreamMode fromString(String value) {
+    switch (value) {
+      case 'manual':
+        return StreamMode.manual;
+      case 'recognition':
+        return StreamMode.recognition;
+      case 'normal':
+      default:
+        return StreamMode.normal;
+    }
+  }
+}
+
+/// Service for managing video stream connection and control.
+/// 
+/// Handles:
+/// - Socket.IO connection to Raspberry Pi
+/// - Video frame reception
+/// - Stream mode switching
+/// - Servo control commands
 class StreamService extends ChangeNotifier {
+  // Connection state
   String _serverIp = '';
+  int _serverPort = 8080;
   bool _isConnected = false;
   bool _isStreaming = false;
-  bool _isTracking = true;
   String? _errorMessage;
   Uint8List? _currentFrame;
   io.Socket? _socket;
+  
+  // Stream mode
+  StreamMode _currentMode = StreamMode.normal;
+  
+  // Servo State
+  double _pan = 90.0;
+  double _tilt = 110.0;
+  bool _servosActive = false;
+  DateTime _lastLocalMoveTime = DateTime.fromMillisecondsSinceEpoch(0);
 
+  // Getters
   String get serverIp => _serverIp;
+  int get serverPort => _serverPort;
   bool get isConnected => _isConnected;
   bool get isStreaming => _isStreaming;
-  bool get isTracking => _isTracking;
   String? get errorMessage => _errorMessage;
   Uint8List? get currentFrame => _currentFrame;
+  StreamMode get currentMode => _currentMode;
+  
+  double get pan => _pan;
+  double get tilt => _tilt;
+  bool get servosActive => _servosActive;
+  
+  // Face Rec
+  List<String> _persons = [];
+  List<String> get persons => _persons;
 
-  void setServerIp(String ip) {
+  /// Set server connection details
+  void setServer(String ip, {int port = 8080}) {
     _serverIp = ip;
+    _serverPort = port;
     _errorMessage = null;
     notifyListeners();
   }
 
+  /// Legacy method for compatibility
+  void setServerIp(String ip) => setServer(ip);
+
+  /// Connect to the Raspberry Pi server
   void connect() {
     if (_serverIp.isEmpty) {
       _errorMessage = 'Please enter server IP address';
@@ -31,45 +96,44 @@ class StreamService extends ChangeNotifier {
       return;
     }
 
-    // Close existing connection if any
+    // Close existing connection
     _socket?.dispose();
 
     try {
-      _socket = io.io('http://$_serverIp:8080/stream', <String, dynamic>{
+      final url = 'http://$_serverIp:$_serverPort/stream';
+      _log('Connecting to: $url');
+      
+      _socket = io.io(url, <String, dynamic>{
         'transports': ['websocket'],
         'autoConnect': false,
       });
 
+      // Connection events
       _socket!.onConnect((_) {
         _isConnected = true;
         _errorMessage = null;
-        logger('Connected to server');
+        _log('Connected successfully');
         notifyListeners();
       });
 
       _socket!.onDisconnect((_) {
         _isConnected = false;
         _isStreaming = false;
-        logger('Disconnected from server');
+        _log('Disconnected from server');
         notifyListeners();
       });
 
       _socket!.onConnectError((data) {
         _errorMessage = 'Connection Error: $data';
         _isConnected = false;
-        logger('Connect Error: $data');
+        _log('Connect Error: $data');
         notifyListeners();
       });
 
-      // Handle video frames
-      int frameCount = 0;
-      DateTime lastLog = DateTime.now();
-
+      // Video frame handler
       _socket!.on('video_frame', (data) {
         try {
           if (data != null) {
-            // Socket.IO for Flutter usually returns Uint8List directly for binary events
-            // or maps containing Uint8List
             final dynamic rawData = data is Map ? data['data'] : data;
             
             if (rawData is Uint8List) {
@@ -79,30 +143,49 @@ class StreamService extends ChangeNotifier {
             }
 
             _isStreaming = true;
-            
-            // Only notify if we haven't updated in ~30ms to prevent UI saturation
-            // This ensures smooth playback without freezing the UI thread
             notifyListeners();
-            
-            frameCount++;
-            if (DateTime.now().difference(lastLog).inSeconds >= 5) {
-              logger('Received $frameCount frames in 5s');
-              frameCount = 0;
-              lastLog = DateTime.now();
-            }
           }
         } catch (e) {
-          logger('Error processing frame: $e');
+          _log('Error processing frame: $e');
         }
       });
 
-      // Handle status updates
+      // Status handler
       _socket!.on('status', (data) {
         if (data != null) {
-          if (data.containsKey('tracking')) _isTracking = data['tracking'];
+          // CRITICAL FIX: In Manual Mode, the Client is the source of truth.
+          // Ignore server position echoes to prevent shaking/jitter.
+          // Only sync with server if we are NOT in manual mode.
+          if (_currentMode != StreamMode.manual) {
+             if (data.containsKey('pan')) _pan = (data['pan'] as num).toDouble();
+             if (data.containsKey('tilt')) _tilt = (data['tilt'] as num).toDouble();
+          }
+          
+          if (data.containsKey('servos_active')) _servosActive = data['servos_active'];
           if (data.containsKey('streaming')) _isStreaming = data['streaming'];
+          if (data.containsKey('mode')) {
+            _currentMode = StreamModeExtension.fromString(data['mode']);
+          }
           notifyListeners();
         }
+      });
+
+      // Mode change handler
+      _socket!.on('mode_changed', (data) {
+        if (data != null && data.containsKey('mode')) {
+          _currentMode = StreamModeExtension.fromString(data['mode']);
+          if (data.containsKey('servos_active')) _servosActive = data['servos_active'];
+          _log('Mode changed to: ${_currentMode.value}');
+          notifyListeners();
+        }
+      });
+
+      // Face Recognition Events
+      _socket!.on('persons_list', (data) {
+         if (data != null && data['persons'] != null) {
+           _persons = List<String>.from(data['persons']);
+           notifyListeners();
+         }
       });
 
       _socket!.connect();
@@ -112,6 +195,7 @@ class StreamService extends ChangeNotifier {
     }
   }
 
+  /// Disconnect from server
   void disconnect() {
     _socket?.disconnect();
     _socket?.dispose();
@@ -122,30 +206,72 @@ class StreamService extends ChangeNotifier {
     notifyListeners();
   }
 
-  void startStreaming() {
-    _socket?.emit('start_streaming');
-  }
-
-  void stopStreaming() {
-    _socket?.emit('stop_streaming');
-    _isStreaming = false;
-    _currentFrame = null;
+  /// Set the stream mode
+  void setStreamMode(StreamMode mode) {
+    _socket?.emit('set_mode', {'mode': mode.value});
+    _currentMode = mode;
     notifyListeners();
+    _log('Requesting mode: ${mode.value}');
   }
 
-  void toggleTracking(bool enabled) {
-    _socket?.emit('toggle_tracking', {'enabled': enabled});
+  /// Adjust Servos relatively (for keyboard control)
+  void adjustPan(double delta) {
+    double newPan = (_pan + delta).clamp(0.0, 180.0);
+    // Optimistic update
+    if ((newPan - _pan).abs() > 0.05) {
+      _pan = newPan; 
+      _lastLocalMoveTime = DateTime.now();
+      moveServo(_pan, _tilt);
+    }
   }
 
-  void centerServo() {
-    _socket?.emit('center_servo');
+  void adjustTilt(double delta) {
+    double newTilt = (_tilt + delta).clamp(90.0, 180.0); // Limit 90-180
+    // Optimistic update
+    if ((newTilt - _tilt).abs() > 0.05) {
+      _tilt = newTilt; 
+      _lastLocalMoveTime = DateTime.now();
+      moveServo(_pan, _tilt);
+    }
   }
 
+  /// Move servos manually (manual mode only)
   void moveServo(double pan, double tilt) {
-    _socket?.emit('move_servo', {'pan': pan, 'tilt': tilt});
+    if (_currentMode == StreamMode.manual) {
+      _socket?.emit('manual_move', {'pan': pan, 'tilt': tilt});
+      notifyListeners();
+    }
   }
 
-  void logger(String msg) {
+  /// Request current status from server
+  void requestStatus() {
+    _socket?.emit('get_status');
+  }
+
+  // --- Face Recognition API ---
+
+  void getPersons() {
+    _socket?.emit('get_persons');
+  }
+
+  void createPerson(String name) {
+    _socket?.emit('create_person', {'name': name});
+  }
+
+  void captureImage(String name, Uint8List imageBytes) {
+    // Send image data to server
+    // Note: SocketIO handles basic type serialization, but lists often safer
+    _socket?.emit('capture_image', {
+      'name': name,
+      'image': imageBytes
+    });
+  }
+
+  void trainModel() {
+    _socket?.emit('train_model');
+  }
+
+  void _log(String msg) {
     if (kDebugMode) {
       print('[StreamService] $msg');
     }

@@ -1,138 +1,183 @@
 """
-Main Server for rpi_pro Face Tracker
-Architecture: Cleaned, Ported Logic from @FaceTracking project
+Main Server for RPi Streamer
+============================
+Refactored to use ControlManager for logic separation.
+Includes Face Recognition capabilities.
 """
-import cv2
-import time
 import logging
-import threading
 from flask import Flask
 from flask_socketio import SocketIO, emit
 from picamera2 import Picamera2
+import cv2
 
 from config import CONFIG
-from servos import ServoController
-from tracker import FaceTrackerPro
+from normal_stream import NormalStreamer
+from control_manager import ControlManager
+from face_manager import FaceManager
 
-# --- Logging ---
-logging.basicConfig(level=logging.INFO, format='%(levelname)s: %(message)s')
+# =============================================================================
+# LOGGING
+# =============================================================================
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s | %(levelname)s | %(message)s',
+    datefmt='%H:%M:%S'
+)
 logger = logging.getLogger(__name__)
 
-# --- App ---
+# =============================================================================
+# FLASK & SOCKET.IO
+# =============================================================================
 app = Flask(__name__)
 socketio = SocketIO(app, cors_allowed_origins="*", async_mode='eventlet')
 
-# --- Globals ---
-servos = ServoController()
-tracker = FaceTrackerPro()
+# =============================================================================
+# GLOBALS & MANAGERS
+# =============================================================================
+# Initialize Managers
+control_manager = ControlManager(socketio)
+normal_streamer = NormalStreamer(CONFIG)
+face_manager = FaceManager()
 picam2 = None
 
-state = {
-    "running": True,
-    "streaming": False,
-    "auto_tracking": True,
-    "pan": CONFIG["SERVOS"]["CENTER_PAN"],
-    "tilt": CONFIG["SERVOS"]["CENTER_TILT"]
-}
-
-def tracking_loop():
-    """Background task for smooth servo movement"""
-    last_pan = -1
-    last_tilt = -1
-    
-    while state["running"]:
-        curr_pan = state["pan"]
-        curr_tilt = state["tilt"]
-        
-        # Only send command if angle has changed
-        # This prevents "PWM jitter" when the face is Centered (Dead Zone)
-        if abs(curr_pan - last_pan) > 0.01 or abs(curr_tilt - last_tilt) > 0.01:
-            servos.move(curr_pan, curr_tilt)
-            last_pan = curr_pan
-            last_tilt = curr_tilt
-        
-        socketio.sleep(0.02) # 50Hz update rate
-
+# =============================================================================
+# BACKGROUND TASKS
+# =============================================================================
 def camera_loop():
-    """Capture, Analysis, and Stream Broadcast"""
+    """
+    Background task: Camera capture and processing.
+    """
     global picam2
+    
     try:
+        # Camera init
         picam2 = Picamera2()
-        # Fix: Capture at 1640x1232 (2x2 binning) to get FULL Field of View (no crop)
-        # Then resize down to 640x480 for processing/streaming.
         cfg = picam2.create_video_configuration(
             main={"size": (1640, 1232), "format": "BGR888"},
             controls={"FrameRate": CONFIG["VIDEO"]["FPS"]}
         )
         picam2.configure(cfg)
         picam2.start()
-        logger.info("Camera online.")
-
-        while state["running"]:
+        logger.info("Camera started")
+        
+        while control_manager.state["running"]:
             frame = picam2.capture_array()
             
-            # "Digital Zoom" Logic (1.3x)
-            # Capture is 1640x1232. We want to crop the center to make it look "closer" 
-            # but not "too close" like the original mode.
-            h, w = frame.shape[:2]
-            zoom_factor = 1.3
-            new_h, new_w = int(h / zoom_factor), int(w / zoom_factor)
-            y_start = (h - new_h) // 2
-            x_start = (w - new_w) // 2
+            # Process Frame based on Mode
+            if control_manager.state["mode"] == "recognition":
+                processed = face_manager.recognize_faces(frame)
+            else:
+                processed = normal_streamer.process_frame(frame)
             
-            frame = frame[y_start:y_start+new_h, x_start:x_start+new_w]
-            
-            # Resize to standard streaming size
-            frame = cv2.resize(frame, (CONFIG["VIDEO"]["WIDTH"], CONFIG["VIDEO"]["HEIGHT"]))
-            
-            if CONFIG["VIDEO"]["FLIP"]:
-                frame = cv2.flip(frame, -1)
-            
-            # Update target angles
-            if state["auto_tracking"]:
-                nt_pan, nt_tilt = tracker.process_frame(frame, state["pan"], state["tilt"])
-                state["pan"], state["tilt"] = nt_pan, nt_tilt
-            
-            # Broadcast frame if streaming
-            if state["streaming"]:
-                _, buf = cv2.imencode('.jpg', frame, [cv2.IMWRITE_JPEG_QUALITY, CONFIG["VIDEO"]["JPEG_QUALITY"]])
-                socketio.emit('video_frame', buf.tobytes(), namespace=CONFIG["NETWORK"]["NAMESPACE"])
+            # Broadcast Frame
+            if control_manager.state["streaming"]:
+                _, buf = cv2.imencode('.jpg', processed, [
+                    cv2.IMWRITE_JPEG_QUALITY,
+                    CONFIG["VIDEO"]["JPEG_QUALITY"]
+                ])
+                socketio.emit(
+                    'video_frame',
+                    buf.tobytes(),
+                    namespace=CONFIG["NETWORK"]["NAMESPACE"]
+                )
             
             socketio.sleep(0.01)
-
+    
     except Exception as e:
-        logger.error(f"Camera Crash: {e}")
+        logger.error(f"Camera error: {e}")
     finally:
-        if picam2: picam2.stop()
-        servos.cleanup()
+        if picam2:
+            picam2.stop()
+        control_manager.cleanup()
+        logger.info("Camera stopped, cleanup done")
 
-# --- Socket Handlers ---
+# =============================================================================
+# SOCKET.IO HANDLERS
+# =============================================================================
 NS = CONFIG["NETWORK"]["NAMESPACE"]
 
 @socketio.on('connect', namespace=NS)
-def on_connect():
-    state["streaming"] = True
-    logger.info("Client connected.")
-    emit('status', {"pan": state["pan"], "tilt": state["tilt"], "tracking": state["auto_tracking"]})
+def handle_connect():
+    control_manager.set_streaming(True)
+    logger.info(f"Client connected | Mode: {control_manager.state['mode']}")
+    emit('status', control_manager.state)
 
-@socketio.on('toggle_tracking', namespace=NS)
-def on_toggle(data):
-    state["auto_tracking"] = data.get("enabled", not state["auto_tracking"])
-    logger.info(f"Auto-tracking: {state['auto_tracking']}")
+@socketio.on('disconnect', namespace=NS)
+def handle_disconnect():
+    control_manager.set_streaming(False) # Optional: Pause streaming on disconnect?
+    logger.info("Client disconnected")
+
+@socketio.on('set_mode', namespace=NS)
+def handle_set_mode(data):
+    new_mode = data.get("mode", "normal")
+    if control_manager.set_mode(new_mode):
+        emit('mode_changed', {
+            "mode": new_mode,
+            "servos_active": control_manager.state["servos_active"]
+        }, broadcast=True)
 
 @socketio.on('manual_move', namespace=NS)
-def on_manual(data):
-    state["auto_tracking"] = False
-    if 'pan' in data: state["pan"] = data['pan']
-    if 'tilt' in data: state["tilt"] = data['tilt']
+def handle_manual_move(data):
+    control_manager.update_manual_position(
+        pan=data.get('pan'),
+        tilt=data.get('tilt')
+    )
 
 @socketio.on('center', namespace=NS)
-def on_center():
-    state["pan"] = CONFIG["SERVOS"]["CENTER_PAN"]
-    state["tilt"] = CONFIG["SERVOS"]["CENTER_TILT"]
+def handle_center():
+    control_manager.center_servos()
 
+@socketio.on('get_status', namespace=NS)
+def handle_get_status():
+    emit('status', control_manager.state)
+
+# --- Person Management ---
+@socketio.on('create_person', namespace=NS)
+def handle_create_person(data):
+    name = data.get('name')
+    if name and face_manager.create_person(name):
+        emit('person_created', {'name': name, 'success': True})
+    else:
+        emit('person_created', {'name': name, 'success': False})
+
+@socketio.on('capture_image', namespace=NS)
+def handle_capture_image(data):
+    name = data.get('name')
+    image_data = data.get('image') # Expecting raw bytes or similar
+    
+    if name and image_data:
+        success = face_manager.save_training_image(name, image_data)
+        emit('image_captured', {'success': success})
+
+@socketio.on('train_model', namespace=NS)
+def handle_train_model():
+    logger.info("Training requested...")
+    success = face_manager.train_model()
+    emit('training_complete', {'success': success})
+
+@socketio.on('get_persons', namespace=NS)
+def handle_get_persons():
+    persons = face_manager.get_persons()
+    emit('persons_list', {'persons': persons})
+
+# =============================================================================
+# MAIN
+# =============================================================================
 if __name__ == '__main__':
-    socketio.start_background_task(tracking_loop)
+    logger.info("=" * 50)
+    logger.info("RPi Streamer (Refactored) - Starting")
+    logger.info("=" * 50)
+    logger.info(f"  Port: {CONFIG['NETWORK']['PORT']}")
+    logger.info("=" * 50)
+    
+    # Start Background Tasks
+    socketio.start_background_task(control_manager.servo_loop)
     socketio.start_background_task(camera_loop)
-    logger.info(f"rpi_pro server starting on port {CONFIG['NETWORK']['PORT']}...")
-    socketio.run(app, host='0.0.0.0', port=CONFIG["NETWORK"]["PORT"], debug=False)
+    
+    # Run Server
+    socketio.run(
+        app,
+        host='0.0.0.0',
+        port=CONFIG["NETWORK"]["PORT"],
+        debug=False
+    )

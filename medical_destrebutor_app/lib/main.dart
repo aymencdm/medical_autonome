@@ -3,13 +3,14 @@ import 'package:provider/provider.dart';
 import 'package:window_manager/window_manager.dart';
 import 'screens/viewer_screen.dart';
 import 'services/stream_service.dart';
+import 'services/settings_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  
+
   // Configure window for desktop
   await windowManager.ensureInitialized();
-  
+
   WindowOptions windowOptions = const WindowOptions(
     size: Size(1280, 800),
     minimumSize: Size(800, 600),
@@ -17,14 +18,14 @@ void main() async {
     backgroundColor: Color(0xFF0A0E21),
     skipTaskbar: false,
     titleBarStyle: TitleBarStyle.normal,
-    title: 'Face Tracker RTP Viewer',
+    title: 'Medical Autonome - Stream Viewer',
   );
-  
+
   windowManager.waitUntilReadyToShow(windowOptions, () async {
     await windowManager.show();
     await windowManager.focus();
   });
-  
+
   runApp(const MyApp());
 }
 
@@ -33,10 +34,13 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ChangeNotifierProvider(
-      create: (_) => StreamService(),
+    return MultiProvider(
+      providers: [
+        ChangeNotifierProvider(create: (_) => SettingsService()),
+        ChangeNotifierProvider(create: (_) => StreamService()),
+      ],
       child: MaterialApp(
-        title: 'Face Tracker RTP Viewer',
+        title: 'Medical Autonome - Stream Viewer',
         debugShowCheckedModeBanner: false,
         theme: ThemeData(
           colorScheme: ColorScheme.fromSeed(
